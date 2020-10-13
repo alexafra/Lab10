@@ -3,11 +3,11 @@
 // #define HORIZONTAL_MAX 320
 // #define VERTICAL_MAX 240
 
-int v_des;  /* desired ticks/s */
+/* int v_des;  // desired ticks/s 
 int enc_new1, v_act1;
 int count = 0;
-int prevCount = 0;
-void onoff_controller()
+int prevCount = 0; */
+/* void onoff_controller()
 { 
     count++;
 
@@ -34,26 +34,48 @@ void onoff_controller()
     // } 
     // MOTORDrive(2, r_mot2);
     // enc_old2 = enc_new2;
-}
+} */
 
 int main()
 { 
     CAMInit(QQVGA);
     LCDImageSize(QQVGA);
-    BYTE myimage[QQVGA_SIZE];
+    BYTE colimage[QQVGA_SIZE];
+    BYTE binimage[QQVGA_SIZE];
 
     /* FILE* ptr = fopen("/home/pi/usr/output.csv", "w");
     v_des = 10000;
     TIMER t1;
     t1 = OSAttachTimer(10, onoff_controller); //100ms
      */
-    LCDMenu("","","","Quit");
+    LCDMenu("","","Take HSI","Quit");
     
     //x = 320
     //y = 240
 
 
-    while (KEYRead() != KEY4) { /* check key */
+    while (1) {
+        if(KEYRead() == KEY4) break;
+        if(KEYRead() == KEY3) {
+            ReadHue();
+        }
+
+        
+        CAMGet(colimage);
+        LCDImageStart(0,0,160,120);
+        LCDImage(colimage);
+        hsiimage = RgbToHsiImage(colimage);
+
+        binimage = ImageFilter(hsiimage);
+        LCDImageStart(160,0,320,120);
+        LCDImageBinary(binimage);
+
+        Crosshair(80,60);
+        PrintHue(80,60, hsiimage)
+
+        int maxCol = MaxColumnHistogram(binimage);
+        int maxRow = MaxRowHistogram(binimage);
+
         // LCDPrintf("Encoder: %d \n", enc_new1);
         // LCDPrintf("Encoder: %d \n", v_act1);
         // LCDPrintf("Encoder: %d \n", count);
@@ -80,63 +102,88 @@ int main()
         /* do other tasks, e.g. set speeds */ 
 
         
-        CAMGet(myimage);
-        LCDImage(myimage);
+        
     } 
     
     return 0; 
 }
 
-//Sure this can be found from a constant somewhere
-int height = 240;
-int width = 320;
-int[2] CENTER = [width/2,height/2];
-
-void Circle(int[2] position){
-    LCDCircle(position[0], position[1], 10, WHITE, NULL);
+void Crosshair(int x, int y){
+    LCDLine(x,y+5,x,y-5,WHITE);
+    LCDLine(x+5,y,x-5,y,WHITE);
 }
 
-/* EXAMPLE OF USE */
-void CenterCircle(){
-    Circle(CENTER);
+void PrintHue(int x, int y, BYTE[] hsiimage){
+    LCDSetPrintf(1, 1, ("Hue: %d",hsiimage[y*160+x]));
 }
 
-void PrintHueToScreen(int[2] position){
-    LCDSetPrintf(position[0], position[1], ("%d,%d",HueFromPosition(position)[0],HueFromPosition(position)[1]);
+BYTE[QQVGA] ImageFilter(BYTE[] hsiimage){
+    //Check for red hue
+    int binimage[QQVGA];
+    for(int i = 0;i<240*320;i++){
+        if(hsiimage[i*3] > something && hsiimage[i*3] < something) { //Hue check
+            if(hsiimage[i*3+2]>50){ //Intensity check
+                binimage[i]=WHITE;
+                //Set this pixel to be red on the binary image TO BE IMPLEMENTED
+            }
+        }
+    }
+    return binimage;
 }
 
-BYTE[3] RGBFromPosition(int[] position){
-    CAMGet(colimage);
-    int pixel = PositionToPixelIndex(position);
-    BYTE p_red = colimage[pixel*3];
-    BYTE p_green = colimage[pixel*3+1];
-    BYTE p_blue = colimage[pixel*3+2];
-    return [p_red,p_green,p_blue];
+int MaxColumnHistogram(BYTE[] binimage){
+    int histogram[160];
+    int max = 0;
+    for(int i = 0;i<160;i++){
+        for(int j = 0; j<120; j++){
+            histogram[i]+=binimage[j*160+i];
+            if(histogram[i]>histogram[max]) max = i;
+        }
+    }
+    return max;
 }
 
-BYTE[3] RGBToHSI(BYTE[3] RGB){
+int MaxRowHistogram(BYTE[] binimage){
+    int histogram[120];
+    int max = 0;
+    for(int i = 0;i<120;i++){
+        for(int j = 0; j<160; j++){
+            histogram[i]+=binimage[i*160+j];
+            if(histogram[i]>histogram[max]) max = i;
+        }
+    }
+    return max;
+}
+
+BYTE[QQVGA] RgbToHsiImage(BYTE[] image){
+    BYTE hsiimage[QQVGA];
+    for(int pixel = 0;i<QQVGA;i=i+3){
+        BYTE p_red = colimage[pixel*3];
+        BYTE p_green = colimage[pixel*3+1];
+        BYTE p_blue = colimage[pixel*3+2];
+        BYTE HSI[3] = RGBToHSI(p_red,p_green,p_blue);
+        hsiimage[pixel] = HSI[0];
+        hsiimage[pixel+1] = HSI[1];
+        hsiimage[pixel+2] = HSI[2];
+    }
+    return hsiimage;
+}
+
+BYTE[3] RgbToHsiPixel(BYTE p_red,BYTE p_green,BYTE p_blue)){
     /* return hue value for RGB color */
     #define NO_HUE 255
     int hue, delta, max, min;
-    max = MAX(RGB[0], MAX(RGB[1],RGB[2]));
-    min = MIN(RGB[0], MIN(RGB[1],RGB[2]));
+    max = MAX(p_red, MAX(p_green,p_blue));
+    min = MIN(p_red, MIN(p_green,p_blue));
     delta = max - min;
     hue =0; /* init hue*/
     if (2*delta <= max) hue = NO_HUE; /* gray, no color */
     else {
-        if (RGB[0]==max) hue = 42 + 42*(RGB[1]-RGB[2])/delta; /* 1*42 */
-        else if (RGB[1]==max) hue = 126 +42*(RGB[2]-RGB[0])/delta; /* 3*42 */
-        else if (RGB[2]==max) hue = 210 +42*(RGB[0]-RGB[1])/delta; /* 5*42 */
+        if (p_red==max) hue = 42 + 42*(p_green-p_blue)/delta; /* 1*42 */
+        else if (p_green==max) hue = 126 +42*(p_blue-p_red)/delta; /* 3*42 */
+        else if (p_blue==max) hue = 210 +42*(p_red-p_green)/delta; /* 5*42 */
     }
-    sat = 1-(min/(RGB[0]+RGB[1]+RGB[2]));
-    intensity = (1/3)*(RGB[0]+RGB[1]+RGB[2]);
-    return [hue,sat,intensity];
-}
-
-int[2] HueFromPosition(int[] position){
-    return RGBToHSI(RGBFromPosition(position));
-}
-
-int PositionToPixelIndex(int[] position){
-    return position[0]*width+position[1];
+    sat = 1-(min/(p_red+p_green+p_blue));
+    intensity = (1/3)*(p_red+p_green+p_blue);
+    return BYTE[hue,sat,intensity];
 }
