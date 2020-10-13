@@ -39,7 +39,7 @@ void onoff_controller()
 int main()
 { 
     CAMInit(QQVGA);
-    //CAMGet(colimage);
+    LCDImageSize(QQVGA);
     LCDPrintf("STARTING");
     FILE* ptr = fopen("/home/pi/usr/output.csv", "w");
     v_des = 10000;
@@ -82,11 +82,37 @@ int main()
     return 0; 
 }
 
-void CameraToDisplay(){
-
+void CamToDisplay(){
+    LCDImage(CAMGet(colimage));
 }
 
-void HueFromPosition(){
+//Sure this can be found from a constant somewhere
+int height = 240;
+int width = 320;
+int[2] CENTER = [width/2,height/2];
 
+void Circle(int[2] position){
+    LCDCircle(position[0], position[1], 10, WHITE, NULL);
 }
 
+/* EXAMPLE OF USE */
+void CenterCircle(){
+    Circle(CENTER);
+}
+
+void PrintHueToScreen(int[2] position){
+    LCDSetPrintf(position[0], position[1], ("%d,%d",HueFromPosition(position)[0],HueFromPosition(position)[1]);
+}
+
+int[3] RGBFromPosition(int[] position){
+    CAMGet(colimage);
+    /* TO BE IMPLEMENTED */
+}
+
+int[2] RGBToHSI(int[3] RGB){
+    /* TO BE IMPLEMENTED */
+}
+
+int[2] HueFromPosition(int[] position){
+    return RGBToHSI(RGBFromPosition(position));
+}
