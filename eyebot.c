@@ -78,7 +78,7 @@ int main()
             int maxRow = MaxRowHistogram(binimage);
             SetCrosshair(maxCol,maxRow);
             ReadHue(maxCol,maxRow);
-            PController(maxCol,maxRow);
+            PController(maxCol);
         }
 
 
@@ -194,6 +194,10 @@ BYTE[3] RgbToHsiPixel(BYTE p_red,BYTE p_green,BYTE p_blue)){
     return BYTE[hue,sat,intensity];
 }
 
-void PController(int x, int y){
-    //NOT IMPLEMENTED, MOVE CAMERA UNTIL CENTER AT X,Y
+void PController(int pv){
+    float p = 0.01;
+    int sp = 80;
+    int e = sp - pv;
+    int output = p*e;
+    //TO BE IMPLEMENTED
 }
