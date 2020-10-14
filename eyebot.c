@@ -117,7 +117,7 @@ void PrintHue(int x, int y, BYTE[] hsiimage){
     LCDSetPrintf(1, 1, ("Hue: %d",hsiimage[y*160+x]));
 }
 
-BYTE[QQVGA] ImageFilter(BYTE[] hsiimage){
+BYTE[160*120] ImageFilter(BYTE[] hsiimage){
     //Check for red hue
     int binimage[QQVGA];
     for(int i = 0;i<240*320;i++){
@@ -161,7 +161,7 @@ BYTE[QQVGA] RgbToHsiImage(BYTE[] image){
         BYTE p_red = colimage[pixel*3];
         BYTE p_green = colimage[pixel*3+1];
         BYTE p_blue = colimage[pixel*3+2];
-        BYTE HSI[3] = RGBToHSI(p_red,p_green,p_blue);
+        BYTE HSI[3] = RgbToHsiPixel(p_red,p_green,p_blue);
         hsiimage[pixel] = HSI[0];
         hsiimage[pixel+1] = HSI[1];
         hsiimage[pixel+2] = HSI[2];
