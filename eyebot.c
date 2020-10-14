@@ -36,6 +36,9 @@ int prevCount = 0; */
     // enc_old2 = enc_new2;
 } */
 
+int lastXCrosshair = 80;
+int lastYCrosshair = 60;
+
 int main()
 { 
     CAMInit(QQVGA);
@@ -67,48 +70,18 @@ int main()
         LCDImageStart(160,0,320,120);
         LCDImageBinary(binimage);
 
+        Crosshair(lastXCrosshair,lastYCrosshair);
+        PrintHue(lastXCrosshair,lastYCrosshair,hsiimage)
         
-
-        if(firstIter){
-            Crosshair(80,60);
-            PrintHue(80,60, hsiimage)
-        }
         if(KEYRead() == KEY3) {
-            int maxCol = MaxColumnHistogram(binimage);
-            int maxRow = MaxRowHistogram(binimage);
-            SetCrosshair(maxCol,maxRow);
-            ReadHue(maxCol,maxRow);
-            PController(maxCol);
+            lastXCrosshair = MaxColumnHistogram(binimage);
+            lastYCrosshair = MaxRowHistogram(binimage);
+            
         }
 
-
-        // LCDPrintf("Encoder: %d \n", enc_new1);
-        // LCDPrintf("Encoder: %d \n", v_act1);
-        // LCDPrintf("Encoder: %d \n", count);
-        // fprintf(ptr, "Encoder: %d \n", v_act1);
-
-        /* if (count != prevCount) {
-            prevCount = count;
-            fprintf(ptr, "%d,%d\n", enc_new1,v_act1);
-        }
-        int mod = count%320;
-        if(v_act1 > 0) {
-            LCDPixel(mod,240-(v_act1/100),WHITE);
-        }
-        if(mod == 0){
-            LCDClear();
-        }
-
-        if (count == 1000) {
-            fclose(ptr);
-            OSDetachTimer(t1);
-            break;
-            return 0;
-        } */
-        /* do other tasks, e.g. set speeds */ 
-
-        
-        
+        //Timer setup
+        TIMER t1;
+        t1 = OSAttachTimer(10, PController); //100ms
     } 
     
     return 0; 
@@ -182,7 +155,7 @@ BYTE[3] RgbToHsiPixel(BYTE p_red,BYTE p_green,BYTE p_blue)){
     max = MAX(p_red, MAX(p_green,p_blue));
     min = MIN(p_red, MIN(p_green,p_blue));
     delta = max - min;
-    hue =0; /* init hue*/
+    hue = 0; /* init hue*/
     if (2*delta <= max) hue = NO_HUE; /* gray, no color */
     else {
         if (p_red==max) hue = 42 + 42*(p_green-p_blue)/delta; /* 1*42 */
@@ -195,9 +168,21 @@ BYTE[3] RgbToHsiPixel(BYTE p_red,BYTE p_green,BYTE p_blue)){
 }
 
 void PController(int pv){
+    //setpoint sp is lastXCrosshair
+    //process variable pv is encoder location
+    //p - proportion coefficient
     float p = 0.01;
-    int sp = 80;
+    int r_mot;
+    static int enc_old;
+    enc_new = ENCODERRead(1); //to be changed for correct motor
+    pv = (enc_new-enc_old);
     int e = sp - pv;
     int output = p*e;
-    //TO BE IMPLEMENTED
+    if (output > 100 ) {
+        output = 100;
+    } else if (output < -100) {
+        output = -100;  
+    }
+    MOTORDrive(1, output); //to be changed for correct motor
+    enc_old1 = enc_new1;
 }
