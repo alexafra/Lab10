@@ -41,7 +41,8 @@ int main()
     CAMInit(QQVGA);
     LCDImageSize(QQVGA);
     BYTE colimage[QQVGA_SIZE];
-    BYTE binimage[QQVGA_SIZE];
+    BYTE hsiimage[QQVGA_SIZE];
+    BYTE binimage[160*120];
 
     /* FILE* ptr = fopen("/home/pi/usr/output.csv", "w");
     v_des = 10000;
@@ -52,14 +53,10 @@ int main()
     
     //x = 320
     //y = 240
-
+    bool firstIter = True;
 
     while (1) {
         if(KEYRead() == KEY4) break;
-        if(KEYRead() == KEY3) {
-            ReadHue();
-        }
-
         
         CAMGet(colimage);
         LCDImageStart(0,0,160,120);
@@ -70,11 +67,20 @@ int main()
         LCDImageStart(160,0,320,120);
         LCDImageBinary(binimage);
 
-        Crosshair(80,60);
-        PrintHue(80,60, hsiimage)
+        
 
-        int maxCol = MaxColumnHistogram(binimage);
-        int maxRow = MaxRowHistogram(binimage);
+        if(firstIter){
+            Crosshair(80,60);
+            PrintHue(80,60, hsiimage)
+        }
+        if(KEYRead() == KEY3) {
+            int maxCol = MaxColumnHistogram(binimage);
+            int maxRow = MaxRowHistogram(binimage);
+            SetCrosshair(maxCol,maxRow);
+            ReadHue(maxCol,maxRow);
+            PController(maxCol,maxRow);
+        }
+
 
         // LCDPrintf("Encoder: %d \n", enc_new1);
         // LCDPrintf("Encoder: %d \n", v_act1);
@@ -186,4 +192,8 @@ BYTE[3] RgbToHsiPixel(BYTE p_red,BYTE p_green,BYTE p_blue)){
     sat = 1-(min/(p_red+p_green+p_blue));
     intensity = (1/3)*(p_red+p_green+p_blue);
     return BYTE[hue,sat,intensity];
+}
+
+void PController(int x, int y){
+    //NOT IMPLEMENTED, MOVE CAMERA UNTIL CENTER AT X,Y
 }
