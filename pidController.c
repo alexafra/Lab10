@@ -16,15 +16,15 @@ void onoff_controller()
 
     int r_mot;
     static int enc_old;
-    static int r_old=0, e_old=0, e_old2=0;;
-    enc_new = ENCODERRead(1); 
-    v_act = (enc_new-enc_old)*100; 
-    int e_func = v_des - v_act; 
+    static int r_old=0, e_old=0, e_old2=0;
+    enc_new = ENCODERRead(1);
+    v_act = (enc_new-enc_old)*100;
+    int e_func = v_des - v_act;
     r_mot = r_old + Kp*(e_func-e_old) + Ki*(e_func+e_old)/2 + Kd*(e_func - 2* e_old + e_old2);
     if (r_mot > 100 ) {
         r_mot = 100;
     } else if (r_mot < -100) {
-        r_mot = -100;  
+        r_mot = -100;
     } 
     MOTORDrive(1, r_mot);
     e_old2 = e_old;

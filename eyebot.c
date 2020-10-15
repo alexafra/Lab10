@@ -1,5 +1,6 @@
 #include "eyebot.h"
 #include <stdio.h>
+
 // #define HORIZONTAL_MAX 320
 // #define VERTICAL_MAX 240
 
@@ -38,117 +39,129 @@ int prevCount = 0; */
 
 int lastXCrosshair = 80;
 int lastYCrosshair = 60;
+int sp = 80;
 
-int main()
-{ 
-    CAMInit(QQVGA);
-    LCDImageSize(QQVGA);
-    BYTE colimage[QQVGA_SIZE];
-    BYTE hsiimage[QQVGA_SIZE];
-    BYTE binimage[160*120];
-
-    /* FILE* ptr = fopen("/home/pi/usr/output.csv", "w");
-    v_des = 10000;
-    TIMER t1;
-    t1 = OSAttachTimer(10, onoff_controller); //100ms
-     */
-    LCDMenu("","","Take HSI","Quit");
+void PController(){
+    //setpoint sp is lastXCrosshair
+    //process variable pv is encoder location
+    //p - proportion coeffic/* ient
+    /**float p = 0.1;
+    static int enc_old;
+    //int enc_new = ENCODERRead(1); //to be changed for correct motor
+    int e = sp - lastXCrosshair;
+    int output = -p*e;
+    if (output > 100 ) {
+        output = 100;
+    } else if (output < -100) {
+        output = -100;  
+    }
+     //to be changed for correct motor
+    enc_old = enc_new;\
     
-    //x = 320
-    //y = 240
-    bool firstIter = True;
+ */
 
-    while (1) {
-        if(KEYRead() == KEY4) break;
-        
-        CAMGet(colimage);
-        LCDImageStart(0,0,160,120);
-        LCDImage(colimage);
-        hsiimage = RgbToHsiImage(colimage);
-
-        binimage = ImageFilter(hsiimage);
-        LCDImageStart(160,0,320,120);
-        LCDImageBinary(binimage);
-
-        Crosshair(lastXCrosshair,lastYCrosshair);
-        PrintHue(lastXCrosshair,lastYCrosshair,hsiimage)
-        
-        if(KEYRead() == KEY3) {
-            lastXCrosshair = MaxColumnHistogram(binimage);
-            lastYCrosshair = MaxRowHistogram(binimage);
-            
-        }
-
-        //Timer setup
-        TIMER t1;
-        t1 = OSAttachTimer(10, PController); //100ms
-    } 
-    
-    return 0; 
+    if(lastXCrosshair < 30){
+        SERVOSet(1, 200);
+    } else if(lastXCrosshair < 120) {
+        SERVOSet(1, 600);
+    } else {
+        SERVOSet(1, 1000);
+    }
 }
-
 void Crosshair(int x, int y){
     LCDLine(x,y+5,x,y-5,WHITE);
     LCDLine(x+5,y,x-5,y,WHITE);
 }
 
-void PrintHue(int x, int y, BYTE[] hsiimage){
-    LCDSetPrintf(1, 1, ("Hue: %d",hsiimage[y*160+x]));
-}
-
-BYTE[160*120] ImageFilter(BYTE[] hsiimage){
-    //Check for red hue
-    int binimage[QQVGA];
-    for(int i = 0;i<240*320;i++){
-        if(hsiimage[i*3] > something && hsiimage[i*3] < something) { //Hue check
-            if(hsiimage[i*3+2]>50){ //Intensity check
-                binimage[i]=WHITE;
-                //Set this pixel to be red on the binary image TO BE IMPLEMENTED
-            }
+void PrintHue(int x, int y, BYTE hsiimage[QQVGA_SIZE]){
+    // print("Hue: %d",(int)hsiimage[y*160+x]);
+    int hueTot = 0;
+    for(int i = -1;i<2;i++){
+        for(int j = -1;j<2;j++){
+            hueTot = hueTot + hsiimage[((y+i)*160+(x+j))*3];
         }
     }
-    return binimage;
+    int hueAv = hueTot/9;
+
+    // int intTot = 0;
+    // for(int i = -1;i<2;i++){
+    //     for(int j = -1;j<2;j++){
+    //         intTot = intTot + hsiimage[((y+i)*160+(x+j))*3+2];
+    //     }
+    // }
+    // int intAv = intTot/9;
+
+    // LCDPrintf("Hue: %d\n", hueAv);
+    // LCDPrintf("Int: %d\n", intAv);
+    
 }
 
-int MaxColumnHistogram(BYTE[] binimage){
+void ImageFilter(BYTE* hsiimage, BYTE binimage[QQVGA_PIXELS]){
+    //Check for red hue
+    // int binimage[QQVGA_PIXELS];
+    int hueUpper = 55;
+    int hueLower = 35;
+    
+    int intLower = 30;
+    int intHigher = 127;
+
+    int satLower = 0;
+    int satHigher = 127;
+
+    for(int i = 0;i<QQVGA_PIXELS;i++){
+        if(hsiimage[i*3] > hueLower && hsiimage[i*3] < hueUpper) { //Hue check TO BE DETERMINED
+            if(hsiimage[i*3+2] > intLower && hsiimage[i*3+2] < intHigher){ //Intensity check
+                if(hsiimage[i*3+1] > satLower && hsiimage[i*3+1] < satHigher){ //Intensity check
+                    binimage[i]=0;
+                }
+                //Set this pixel to be red on the binary image TO BE IMPLEMENTED
+                else{
+                    binimage[i] = 1;
+                }
+            } else {
+                binimage[i] = 1;
+            }
+        } else {
+            binimage[i] = 1;
+        }
+    }
+}
+
+int MaxColumnHistogram(BYTE* binimage){
     int histogram[160];
-    int max = 0;
+    int min = 0;
     for(int i = 0;i<160;i++){
         for(int j = 0; j<120; j++){
             histogram[i]+=binimage[j*160+i];
-            if(histogram[i]>histogram[max]) max = i;
+            if(histogram[i]<histogram[min]) min = i;
         }
     }
-    return max;
+    return min;
 }
 
-int MaxRowHistogram(BYTE[] binimage){
+int MaxRowHistogram(BYTE* binimage){
     int histogram[120];
-    int max = 0;
+    int min = 0;
     for(int i = 0;i<120;i++){
         for(int j = 0; j<160; j++){
             histogram[i]+=binimage[i*160+j];
-            if(histogram[i]>histogram[max]) max = i;
+            if(histogram[i]<histogram[min]) min = i;
         }
     }
-    return max;
+    return min;
 }
 
-BYTE[QQVGA] RgbToHsiImage(BYTE[] image){
-    BYTE hsiimage[QQVGA];
-    for(int pixel = 0;i<QQVGA;i=i+3){
-        BYTE p_red = colimage[pixel*3];
-        BYTE p_green = colimage[pixel*3+1];
-        BYTE p_blue = colimage[pixel*3+2];
-        BYTE HSI[3] = RgbToHsiPixel(p_red,p_green,p_blue);
-        hsiimage[pixel] = HSI[0];
-        hsiimage[pixel+1] = HSI[1];
-        hsiimage[pixel+2] = HSI[2];
-    }
-    return hsiimage;
+int MAX(int a, int b){
+    if(a>b) return a;
+    return b;
 }
 
-BYTE[3] RgbToHsiPixel(BYTE p_red,BYTE p_green,BYTE p_blue)){
+bool MIN(int a, int b){
+    if(a<b) return a;
+    return b;
+}
+
+void RgbToHsiPixel(BYTE p_red,BYTE p_green,BYTE p_blue, BYTE hsi[3]){
     /* return hue value for RGB color */
     #define NO_HUE 255
     int hue, delta, max, min;
@@ -162,27 +175,72 @@ BYTE[3] RgbToHsiPixel(BYTE p_red,BYTE p_green,BYTE p_blue)){
         else if (p_green==max) hue = 126 +42*(p_blue-p_red)/delta; /* 3*42 */
         else if (p_blue==max) hue = 210 +42*(p_red-p_green)/delta; /* 5*42 */
     }
-    sat = 1-(min/(p_red+p_green+p_blue));
-    intensity = (1/3)*(p_red+p_green+p_blue);
-    return BYTE[hue,sat,intensity];
+    int sat = 1-(min/(p_red+p_green+p_blue));
+    int intensity = (int) ((1.0/3.0)*(p_red+p_green+p_blue));
+    hsi[0] =hue;
+    hsi[1] = sat;
+    hsi[2] = intensity;
 }
 
-void PController(int pv){
-    //setpoint sp is lastXCrosshair
-    //process variable pv is encoder location
-    //p - proportion coefficient
-    float p = 0.01;
-    int r_mot;
-    static int enc_old;
-    enc_new = ENCODERRead(1); //to be changed for correct motor
-    pv = (enc_new-enc_old);
-    int e = sp - pv;
-    int output = p*e;
-    if (output > 100 ) {
-        output = 100;
-    } else if (output < -100) {
-        output = -100;  
+void  RgbToHsiImage(BYTE image[QQVGA_SIZE], BYTE hsiimage[QQVGA_SIZE]){
+    for(int pixel = 0;pixel<QQVGA_SIZE;pixel=pixel+3){
+        BYTE p_red = image[pixel];
+        BYTE p_green = image[pixel+1];
+        BYTE p_blue = image[pixel+2];
+        BYTE HSI[3];
+        RgbToHsiPixel(p_red,p_green,p_blue, HSI);
+        hsiimage[pixel] = HSI[0];
+        hsiimage[pixel+1] = HSI[1];
+        hsiimage[pixel+2] = HSI[2];
     }
-    MOTORDrive(1, output); //to be changed for correct motor
-    enc_old1 = enc_new1;
 }
+
+int main()
+{ 
+    CAMInit(QQVGA);
+    LCDImageSize(QQVGA);
+    BYTE colimage[QQVGA_SIZE];
+    BYTE hsiimage[QQVGA_SIZE];
+    BYTE binimage[QQVGA_PIXELS];
+
+    //TIMER t1;
+    //t1 = OSAttachTimer(10, onoff_controller); //100ms
+    
+    LCDMenu("","","Take HSI","Quit");
+    
+    //Timer setup
+    TIMER t1;
+    t1 = OSAttachTimer(10, PController); //100ms
+
+    while (1) {
+        if(KEYRead() == KEY4) break;
+        
+        CAMGet(colimage);
+        LCDImageStart(0,0,160,120);
+        LCDImage(colimage);
+
+        RgbToHsiImage(colimage, hsiimage);
+        ImageFilter(hsiimage, binimage);
+
+        LCDImageStart(160,0,160,120);
+        LCDImageBinary(binimage);
+
+        
+        PrintHue(lastXCrosshair,lastYCrosshair,hsiimage);
+        
+        
+        lastXCrosshair = MaxColumnHistogram(binimage);
+        lastYCrosshair = MaxRowHistogram(binimage);
+
+        Crosshair(lastXCrosshair,lastYCrosshair);        
+            
+        
+
+        
+    } 
+    
+    return 0; 
+}
+
+
+
